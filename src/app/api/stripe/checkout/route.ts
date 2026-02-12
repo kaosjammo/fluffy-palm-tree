@@ -16,6 +16,11 @@ export async function POST() {
     mode: "subscription",
     customer: dbUser.stripeCustomerId ?? undefined,
     customer_email: dbUser.email,
+    client_reference_id: dbUser.id,
+    metadata: {
+      appUserId: dbUser.id,
+      supabaseUserId: dbUser.supabaseUserId,
+    },
     line_items: [{ price: env.STRIPE_PRICE_ID_PRO, quantity: 1 }],
     success_url: `${env.NEXT_PUBLIC_APP_URL}/account?upgraded=1`,
     cancel_url: `${env.NEXT_PUBLIC_APP_URL}/pricing`,

@@ -20,18 +20,29 @@ enum FrameType {
 }
 
 model User {
-  id               String    @id @default(cuid())
-  supabaseUserId   String    @unique
-  email            String    @unique
-  plan             PlanTier  @default(FREE)
-  stripeCustomerId String?   @unique
-  stripeSubId      String?   @unique
-  exportsToday     Int       @default(0)
-  exportResetAt    DateTime  @default(now())
-  presets          Preset[]
-  exports          Export[]
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  id                  String                @id @default(cuid())
+  supabaseUserId      String                @unique
+  email               String                @unique
+  plan                PlanTier              @default(FREE)
+  stripeCustomerId    String?               @unique
+  stripeSubscriptionId String?              @unique
+  stripePriceId       String?
+  subscriptionStatus  String?
+  currentPeriodEnd    DateTime?
+  lastWebhookUpdateAt DateTime?
+  exportsToday        Int                   @default(0)
+  exportResetAt       DateTime              @default(now())
+  presets             Preset[]
+  exports             Export[]
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+}
+
+model StripeWebhookEvent {
+  id              String   @id @default(cuid())
+  stripeEventId   String   @unique
+  stripeEventType String
+  createdAt       DateTime @default(now())
 }
 
 model Preset {

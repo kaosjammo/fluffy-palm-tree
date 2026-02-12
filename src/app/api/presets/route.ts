@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { PlanTier } from "@prisma/client";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { canUsePreset } from "@/lib/plans";
+import { getPlanForUser } from "@/lib/billing";
 
 export async function POST(request: Request) {
   const user = await requireUser();
@@ -12,7 +12,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "User not provisioned" }, { status: 403 });
   }
 
-  if (!canUsePreset(dbUser.plan ?? PlanTier.FREE)) {
+  if (!canUsePreset(getPlanForUser(dbUser))) {
     return NextResponse.json({ error: "Saved presets are a Pro feature" }, { status: 403 });
   }
 

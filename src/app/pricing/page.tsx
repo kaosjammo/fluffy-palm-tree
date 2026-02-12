@@ -1,4 +1,7 @@
 import { Header } from "@/components/header";
+import { prisma } from "@/lib/prisma";
+import { createSupabaseServer } from "@/lib/supabase";
+import { getPlanForUser } from "@/lib/billing";
 
 const plans = [
   {
@@ -13,13 +16,27 @@ const plans = [
   },
 ];
 
-export default function PricingPage() {
+export default async function PricingPage() {
+  const supabase = await createSupabaseServer();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  let currentPlan: string | null = null;
+  if (user) {
+    const dbUser = await prisma.user.findUnique({ where: { supabaseUserId: user.id } });
+    if (dbUser) {
+      currentPlan = getPlanForUser(dbUser);
+    }
+  }
+
   return (
     <main className="min-h-screen">
       <Header />
       <section className="mx-auto w-full max-w-5xl px-4 py-12">
         <h1 className="text-3xl font-semibold text-white">Pricing</h1>
         <p className="mt-2 text-slate-300">Simple pricing built for creators and product teams.</p>
+        {currentPlan ? <p className="mt-2 text-sm text-fuchsia-300">Your current synced plan: {currentPlan}</p> : null}
 
         <div className="mt-8 grid gap-4 md:grid-cols-2">
           {plans.map((plan) => (

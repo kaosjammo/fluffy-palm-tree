@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { PLAN_LIMITS } from "@/lib/plans";
+import { getPlanForUser } from "@/lib/billing";
 import { exportSettingsSchema } from "@/lib/export-config";
 import { renderExport } from "@/lib/export-renderer";
 
@@ -20,7 +21,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "User not provisioned" }, { status: 403 });
   }
 
-  const plan = dbUser.plan ?? PlanTier.FREE;
+  const plan = getPlanForUser(dbUser);
   const limits = PLAN_LIMITS[plan];
 
   if (plan === PlanTier.FREE) {

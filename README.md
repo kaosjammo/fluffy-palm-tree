@@ -20,7 +20,7 @@ Snapframe is a minimal SaaS MVP that turns raw screenshots into polished mockups
 - Server routes for:
   - Export rendering with server-side plan gating
   - Pro-only preset save enforcement
-  - Stripe checkout and billing portal session creation
+  - Stripe checkout, billing portal, and webhook syncing
 
 ## Plan Rules
 
@@ -88,11 +88,38 @@ Use the verification script to confirm rendering + plan behavior locally.
    - Pro render is within 3840x2160 and has no watermark.
    - Script compares bottom watermark-area pixels between Free and Pro outputs.
 
+## Stripe Webhook Local Testing
+
+1. Start the app:
+   ```bash
+   npm run dev
+   ```
+2. In another shell, forward Stripe events to local webhook:
+   ```bash
+   stripe listen --forward-to localhost:3000/api/stripe/webhook
+   ```
+3. Trigger checkout from the app (POST to `/api/stripe/checkout`) and complete payment using Stripe test card `4242 4242 4242 4242`.
+4. Confirm user billing state updated to Pro:
+   ```bash
+   curl -s http://localhost:3000/api/dev/billing-state
+   ```
+5. Cancel subscription in Stripe test dashboard or billing portal, then trigger/update webhook events and confirm state returns to Free:
+   ```bash
+   curl -s http://localhost:3000/api/dev/billing-state
+   ```
+
+Expected webhook behavior:
+- `checkout.session.completed` links customer/subscription to app user.
+- `customer.subscription.created` and `customer.subscription.updated` set status/period/plan.
+- `customer.subscription.deleted` downgrades plan to Free.
+- Duplicate webhook deliveries are ignored safely.
+
 ## Manual QA Checklist
 
 - [ ] Sign in as a Free user and export 5 times from `/app`; 6th attempt returns a clear limit message.
 - [ ] Free export downloads PNG with watermark footer and output dimensions capped at 1080p.
-- [ ] Upgrade to Pro and export again; watermark is removed and output can scale up to 4K.
+- [ ] Upgrade to Pro in Stripe test checkout and confirm account plan updates to PRO automatically.
+- [ ] Cancel Stripe subscription and confirm account plan returns to FREE automatically.
 - [ ] Exported style settings (padding/background/frame/shadow/radius) in downloaded image match the editor preview styling.
 - [ ] Confirm `Export` records are written with `userId`, `createdAt`, `width`, `height`, `watermarkApplied`, and `planAtTime`.
 
@@ -100,6 +127,8 @@ Use the verification script to confirm rendering + plan behavior locally.
 
 - `/api/stripe/checkout` creates a subscription checkout session for Pro.
 - `/api/stripe/portal` sends existing paying users to the billing portal.
+- `/api/stripe/webhook` verifies Stripe signatures and syncs billing fields/plan.
+- `/api/dev/billing-state` prints current user billing state and last webhook processing info.
 
 ## Deployment (Vercel)
 
