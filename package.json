@@ -10,7 +10,8 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
-    "verify:export": "tsx scripts/verify-export.ts"
+    "verify:export": "tsx scripts/verify-export.ts",
+    "billing:state": "tsx scripts/billing-state.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

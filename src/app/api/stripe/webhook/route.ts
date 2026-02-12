@@ -7,6 +7,10 @@ import { downgradeUserToFree, registerStripeEvent, syncUserBillingFromSubscripti
 
 export const runtime = "nodejs";
 
+function unmapped(event: Stripe.Event, reason: string): never {
+  throw new Error(`Unmapped Stripe event ${event.id} (${event.type}): ${reason}`);
+}
+
 export async function POST(request: Request) {
   const env = getEnv();
   const stripe = getStripe();
@@ -40,7 +44,7 @@ export async function POST(request: Request) {
         const customerEmail = session.customer_details?.email ?? session.customer_email ?? null;
 
         if (!customerId) {
-          break;
+          unmapped(event, "Missing customerId on checkout.session.completed");
         }
 
         const dbUser =
@@ -56,7 +60,7 @@ export async function POST(request: Request) {
             : null);
 
         if (!dbUser) {
-          break;
+          unmapped(event, "Could not map checkout session to a user");
         }
 
         await prisma.user.update({
@@ -84,7 +88,7 @@ export async function POST(request: Request) {
         const subscription = event.data.object as Stripe.Subscription;
         const customerId = typeof subscription.customer === "string" ? subscription.customer : null;
         if (!customerId) {
-          break;
+          unmapped(event, "Missing customerId on subscription event");
         }
 
         const user = await prisma.user.findFirst({
@@ -94,7 +98,7 @@ export async function POST(request: Request) {
         });
 
         if (!user) {
-          break;
+          unmapped(event, "Could not map subscription event to a user");
         }
 
         await syncUserBillingFromSubscription({
@@ -109,7 +113,7 @@ export async function POST(request: Request) {
         const subscription = event.data.object as Stripe.Subscription;
         const customerId = typeof subscription.customer === "string" ? subscription.customer : null;
         if (!customerId) {
-          break;
+          unmapped(event, "Missing customerId on subscription.deleted");
         }
 
         const user = await prisma.user.findFirst({
@@ -119,7 +123,7 @@ export async function POST(request: Request) {
         });
 
         if (!user) {
-          break;
+          unmapped(event, "Could not map subscription.deleted to a user");
         }
 
         await downgradeUserToFree({
@@ -136,6 +140,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true });
   } catch (error) {
+    console.error("Stripe webhook handling failed", error);
     await unregisterStripeEvent(event.id);
     return NextResponse.json({ error: "Webhook handler failed", details: String(error) }, { status: 500 });
   }
