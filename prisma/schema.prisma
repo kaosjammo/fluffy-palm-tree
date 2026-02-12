@@ -1,0 +1,64 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum PlanTier {
+  FREE
+  PRO
+}
+
+enum FrameType {
+  NONE
+  BROWSER
+  IPHONE
+  MAC
+}
+
+model User {
+  id              String      @id @default(cuid())
+  supabaseUserId  String      @unique
+  email           String      @unique
+  plan            PlanTier    @default(FREE)
+  stripeCustomerId String?    @unique
+  stripeSubId     String?     @unique
+  exportsToday    Int         @default(0)
+  exportResetAt   DateTime    @default(now())
+  presets         Preset[]
+  exports         Export[]
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+}
+
+model Preset {
+  id              String      @id @default(cuid())
+  userId          String
+  name            String
+  padding         Int         @default(48)
+  background      String      @default("solid")
+  backgroundValue String      @default("#111827")
+  frameType       FrameType   @default(NONE)
+  radius          Int         @default(16)
+  shadow          Int         @default(40)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, name])
+}
+
+model Export {
+  id         String    @id @default(cuid())
+  userId     String
+  width      Int
+  height     Int
+  watermark  Boolean   @default(true)
+  createdAt  DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}

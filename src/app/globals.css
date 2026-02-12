@@ -1,0 +1,18 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  @apply bg-slate-950 text-slate-100 antialiased;
+}
+
+input,
+select,
+button,
+textarea {
+  @apply outline-none ring-fuchsia-500 focus:ring-2;
+}

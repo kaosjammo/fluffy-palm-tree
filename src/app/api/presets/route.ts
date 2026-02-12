@@ -1,0 +1,37 @@
+import { NextResponse } from "next/server";
+import { PlanTier } from "@prisma/client";
+import { requireUser } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { canUsePreset } from "@/lib/plans";
+
+export async function POST(request: Request) {
+  const user = await requireUser();
+  const dbUser = await prisma.user.findUnique({ where: { supabaseUserId: user.id } });
+
+  if (!dbUser) {
+    return NextResponse.json({ error: "User not provisioned" }, { status: 403 });
+  }
+
+  if (!canUsePreset(dbUser.plan ?? PlanTier.FREE)) {
+    return NextResponse.json({ error: "Saved presets are a Pro feature" }, { status: 403 });
+  }
+
+  const payload = (await request.json()) as {
+    name: string;
+    padding: number;
+    background: string;
+    backgroundValue: string;
+    frameType: "NONE" | "BROWSER" | "IPHONE" | "MAC";
+    radius: number;
+    shadow: number;
+  };
+
+  const preset = await prisma.preset.create({
+    data: {
+      userId: dbUser.id,
+      ...payload,
+    },
+  });
+
+  return NextResponse.json({ preset });
+}
