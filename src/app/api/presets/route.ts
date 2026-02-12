@@ -9,7 +9,7 @@ export async function POST(request: Request) {
   const dbUser = await prisma.user.findUnique({ where: { supabaseUserId: user.id } });
 
   if (!dbUser) {
-    return NextResponse.json({ error: "User not provisioned" }, { status: 403 });
+    return NextResponse.json({ error: "User provisioning failed" }, { status: 500 });
   }
 
   if (!canUsePreset(getPlanForUser(dbUser))) {

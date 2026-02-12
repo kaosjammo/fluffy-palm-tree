@@ -112,7 +112,7 @@ Expected webhook behavior:
 - `checkout.session.completed` links customer/subscription to app user.
 - `customer.subscription.created` and `customer.subscription.updated` set status/period/plan.
 - `customer.subscription.deleted` downgrades plan to Free.
-- Duplicate webhook deliveries are ignored safely.
+- Duplicate successfully-processed webhook deliveries are ignored; failed events are retried.
 
 ## Manual QA Checklist
 

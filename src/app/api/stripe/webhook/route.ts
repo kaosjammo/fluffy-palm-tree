@@ -29,8 +29,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid Stripe signature", details: String(error) }, { status: 400 });
   }
 
+  console.info("Stripe webhook received", { eventId: event.id, eventType: event.type });
+
   const shouldProcess = await registerStripeEvent(event);
   if (!shouldProcess) {
+    console.info("Stripe webhook duplicate ignored", { eventId: event.id, eventType: event.type });
     return NextResponse.json({ ok: true, duplicate: true });
   }
 
@@ -138,6 +141,7 @@ export async function POST(request: Request) {
         break;
     }
 
+    console.info("Stripe webhook processed", { eventId: event.id, eventType: event.type });
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("Stripe webhook handling failed", error);
