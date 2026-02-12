@@ -128,6 +128,7 @@ Expected webhook behavior:
 - `/api/stripe/checkout` creates a subscription checkout session for Pro.
 - `/api/stripe/portal` sends existing paying users to the billing portal.
 - `/api/stripe/webhook` verifies Stripe signatures and syncs billing fields/plan.
+- Users are automatically provisioned into Prisma on first authenticated server session (`supabaseUserId` + `email`).
 - `npm run billing:state -- --email <email>` prints billing state and last webhook processing info.
 
 ## Deployment (Vercel)

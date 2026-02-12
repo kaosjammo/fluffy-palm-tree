@@ -2,6 +2,7 @@ import { Header } from "@/components/header";
 import { prisma } from "@/lib/prisma";
 import { createSupabaseServer } from "@/lib/supabase";
 import { getPlanForUser } from "@/lib/billing";
+import { provisionUserFromAuth } from "@/lib/auth";
 
 const plans = [
   {
@@ -24,6 +25,7 @@ export default async function PricingPage() {
 
   let currentPlan: string | null = null;
   if (user) {
+    await provisionUserFromAuth(user);
     const dbUser = await prisma.user.findUnique({ where: { supabaseUserId: user.id } });
     if (dbUser) {
       currentPlan = getPlanForUser(dbUser);
