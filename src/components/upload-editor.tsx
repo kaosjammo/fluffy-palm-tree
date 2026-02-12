@@ -2,16 +2,31 @@
 
 import { ChangeEvent, useMemo, useState } from "react";
 
-const FRAMES = ["None", "Browser", "iPhone", "Mac"] as const;
-const BACKGROUNDS = ["Solid", "Gradient", "Blur"] as const;
+type FrameOption = "NONE" | "BROWSER" | "IPHONE" | "MAC";
+type BackgroundOption = "SOLID" | "GRADIENT" | "BLUR";
+
+const FRAMES: Array<{ label: string; value: FrameOption }> = [
+  { label: "None", value: "NONE" },
+  { label: "Browser", value: "BROWSER" },
+  { label: "iPhone", value: "IPHONE" },
+  { label: "Mac", value: "MAC" },
+];
+
+const BACKGROUNDS: Array<{ label: string; value: BackgroundOption }> = [
+  { label: "Solid", value: "SOLID" },
+  { label: "Gradient", value: "GRADIENT" },
+  { label: "Blur", value: "BLUR" },
+];
 
 export function UploadEditor() {
   const [image, setImage] = useState<string | null>(null);
   const [padding, setPadding] = useState(48);
   const [radius, setRadius] = useState(24);
   const [shadow, setShadow] = useState(40);
-  const [frame, setFrame] = useState<(typeof FRAMES)[number]>("Browser");
-  const [background, setBackground] = useState<(typeof BACKGROUNDS)[number]>("Gradient");
+  const [frame, setFrame] = useState<FrameOption>("BROWSER");
+  const [background, setBackground] = useState<BackgroundOption>("GRADIENT");
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportMessage, setExportMessage] = useState<string | null>(null);
 
   const wrapperStyle = useMemo(() => {
     const base = {
@@ -20,15 +35,14 @@ export function UploadEditor() {
       boxShadow: `0 20px ${shadow}px rgba(15, 23, 42, 0.55)`,
     };
 
-    if (background === "Solid") {
+    if (background === "SOLID") {
       return { ...base, background: "#1e1b4b" };
     }
 
-    if (background === "Blur") {
+    if (background === "BLUR") {
       return {
         ...base,
-        background: "rgba(30, 41, 59, 0.6)",
-        backdropFilter: "blur(18px)",
+        background: "#334155",
       };
     }
 
@@ -43,19 +57,63 @@ export function UploadEditor() {
     reader.onload = () => {
       if (typeof reader.result === "string") {
         setImage(reader.result);
+        setExportMessage(null);
       }
     };
     reader.readAsDataURL(file);
   };
 
   const frameClass =
-    frame === "Browser"
+    frame === "BROWSER"
       ? "border-8 border-slate-900"
-      : frame === "iPhone"
+      : frame === "IPHONE"
         ? "rounded-[38px] border-[14px] border-black"
-        : frame === "Mac"
+        : frame === "MAC"
           ? "border-8 border-slate-300"
           : "";
+
+  const onExport = async () => {
+    if (!image) return;
+
+    setIsExporting(true);
+    setExportMessage(null);
+
+    try {
+      const response = await fetch("/api/export", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          padding,
+          radius,
+          shadow,
+          frame,
+          background,
+          imageDataUrl: image,
+        }),
+      });
+
+      if (!response.ok) {
+        const data = (await response.json()) as { error?: string; message?: string };
+        setExportMessage(data.message ?? data.error ?? "Export failed.");
+        return;
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "snapframe-export.png";
+      link.click();
+      URL.revokeObjectURL(url);
+      setExportMessage("Export generated.");
+    } catch {
+      setExportMessage("Export failed. Please try again.");
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   return (
     <div className="grid gap-6 lg:grid-cols-[320px,1fr]">
@@ -82,21 +140,36 @@ export function UploadEditor() {
 
         <label className="block text-sm">
           Background
-          <select className="mt-2 w-full rounded-md border border-white/10 bg-slate-800 p-2" value={background} onChange={(e) => setBackground(e.target.value as (typeof BACKGROUNDS)[number])}>
+          <select className="mt-2 w-full rounded-md border border-white/10 bg-slate-800 p-2" value={background} onChange={(e) => setBackground(e.target.value as BackgroundOption)}>
             {BACKGROUNDS.map((item) => (
-              <option key={item}>{item}</option>
+              <option key={item.value} value={item.value}>
+                {item.label}
+              </option>
             ))}
           </select>
         </label>
 
         <label className="block text-sm">
           Template Frame
-          <select className="mt-2 w-full rounded-md border border-white/10 bg-slate-800 p-2" value={frame} onChange={(e) => setFrame(e.target.value as (typeof FRAMES)[number])}>
+          <select className="mt-2 w-full rounded-md border border-white/10 bg-slate-800 p-2" value={frame} onChange={(e) => setFrame(e.target.value as FrameOption)}>
             {FRAMES.map((item) => (
-              <option key={item}>{item}</option>
+              <option key={item.value} value={item.value}>
+                {item.label}
+              </option>
             ))}
           </select>
         </label>
+
+        <button
+          type="button"
+          onClick={onExport}
+          disabled={!image || isExporting}
+          className="w-full rounded-lg bg-indigo-500 px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {isExporting ? "Exporting..." : "Export PNG"}
+        </button>
+
+        {exportMessage ? <p className="text-sm text-slate-200">{exportMessage}</p> : null}
       </aside>
 
       <section className="rounded-xl border border-white/10 bg-slate-900/50 p-6">

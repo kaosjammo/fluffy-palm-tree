@@ -1,50 +1,73 @@
-import { NextResponse } from "next/server";
 import { PlanTier } from "@prisma/client";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { PLAN_LIMITS } from "@/lib/plans";
 import { requireUser } from "@/lib/auth";
+import { PLAN_LIMITS } from "@/lib/plans";
+import { exportSettingsSchema } from "@/lib/export-config";
+import { renderExport } from "@/lib/export-renderer";
 
 export async function POST(request: Request) {
   const user = await requireUser();
-  const body = (await request.json()) as { width: number; height: number };
+  const json = await request.json();
+  const parsed = exportSettingsSchema.safeParse(json);
+
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Invalid export payload", details: parsed.error.flatten() }, { status: 400 });
+  }
 
   const dbUser = await prisma.user.findUnique({ where: { supabaseUserId: user.id } });
   if (!dbUser) {
     return NextResponse.json({ error: "User not provisioned" }, { status: 403 });
   }
 
-  const now = new Date();
-  const shouldReset = dbUser.exportResetAt.toDateString() !== now.toDateString();
-  const exportsToday = shouldReset ? 0 : dbUser.exportsToday;
   const plan = dbUser.plan ?? PlanTier.FREE;
   const limits = PLAN_LIMITS[plan];
 
-  if (exportsToday >= limits.maxExportsPerDay) {
-    return NextResponse.json({ error: "Daily export limit reached" }, { status: 429 });
+  if (plan === PlanTier.FREE) {
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const exportsToday = await prisma.export.count({
+      where: {
+        userId: dbUser.id,
+        createdAt: {
+          gte: startOfDay,
+        },
+      },
+    });
+
+    if (exportsToday >= limits.maxExportsPerDay) {
+      return NextResponse.json(
+        { error: "Daily export limit reached", code: "EXPORT_LIMIT_REACHED", message: "Free plan allows 5 exports per day. Upgrade to Pro for unlimited exports." },
+        { status: 429 },
+      );
+    }
   }
 
-  const maxPixels = limits.maxResolution === "4k" ? { w: 3840, h: 2160 } : { w: 1920, h: 1080 };
-  if (body.width > maxPixels.w || body.height > maxPixels.h) {
-    return NextResponse.json({ error: `Max export resolution for your plan is ${limits.maxResolution}` }, { status: 403 });
-  }
+  try {
+    const render = await renderExport(parsed.data, limits.watermark, limits.maxWidth, limits.maxHeight);
 
-  await prisma.$transaction([
-    prisma.export.create({
+    await prisma.export.create({
       data: {
         userId: dbUser.id,
-        width: body.width,
-        height: body.height,
-        watermark: limits.watermark,
+        width: render.width,
+        height: render.height,
+        watermarkApplied: render.watermarkApplied,
+        planAtTime: plan,
       },
-    }),
-    prisma.user.update({
-      where: { id: dbUser.id },
-      data: {
-        exportsToday: exportsToday + 1,
-        exportResetAt: now,
-      },
-    }),
-  ]);
+    });
 
-  return NextResponse.json({ ok: true, watermark: limits.watermark });
+    return new NextResponse(render.buffer, {
+      status: 200,
+      headers: {
+        "Content-Type": "image/png",
+        "Content-Disposition": 'attachment; filename="snapframe-export.png"',
+        "X-Snapframe-Watermark": String(render.watermarkApplied),
+        "X-Snapframe-Plan": plan,
+      },
+    });
+  } catch (error) {
+    console.error("Export failed", error);
+    return NextResponse.json({ error: "Export failed to render" }, { status: 500 });
+  }
 }

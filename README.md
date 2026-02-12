@@ -18,7 +18,7 @@ Snapframe is a minimal SaaS MVP that turns raw screenshots into polished mockups
 - App dashboard: `/app` with upload + style controls + live preview
 - Account page: `/account` with Stripe actions
 - Server routes for:
-  - Export creation with server-side plan gating
+  - Export rendering with server-side plan gating
   - Pro-only preset save enforcement
   - Stripe checkout and billing portal session creation
 
@@ -69,6 +69,32 @@ Snapframe is a minimal SaaS MVP that turns raw screenshots into polished mockups
    ```bash
    npm run dev
    ```
+
+## Export Verification (Dev)
+
+Use the verification script to confirm rendering + plan behavior locally.
+
+1. Ensure dependencies are installed:
+   ```bash
+   npm install
+   ```
+2. Run the verification script:
+   ```bash
+   npm run verify:export
+   ```
+3. Expected result:
+   - Script exits successfully.
+   - Free render is within 1920x1080 and includes watermark.
+   - Pro render is within 3840x2160 and has no watermark.
+   - Script compares bottom watermark-area pixels between Free and Pro outputs.
+
+## Manual QA Checklist
+
+- [ ] Sign in as a Free user and export 5 times from `/app`; 6th attempt returns a clear limit message.
+- [ ] Free export downloads PNG with watermark footer and output dimensions capped at 1080p.
+- [ ] Upgrade to Pro and export again; watermark is removed and output can scale up to 4K.
+- [ ] Exported style settings (padding/background/frame/shadow/radius) in downloaded image match the editor preview styling.
+- [ ] Confirm `Export` records are written with `userId`, `createdAt`, `width`, `height`, `watermarkApplied`, and `planAtTime`.
 
 ## Stripe Notes
 

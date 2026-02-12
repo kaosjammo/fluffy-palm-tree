@@ -9,7 +9,8 @@
     "lint": "next lint",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
-    "db:seed": "tsx prisma/seed.ts"
+    "db:seed": "tsx prisma/seed.ts",
+    "verify:export": "tsx scripts/verify-export.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
@@ -20,7 +21,8 @@
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "stripe": "^17.7.0",
-    "zod": "^3.24.1"
+    "zod": "^3.24.1",
+    "sharp": "^0.33.5"
   },
   "devDependencies": {
     "@types/node": "^22.10.5",
