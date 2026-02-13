@@ -101,11 +101,11 @@ Use the verification script to confirm rendering + plan behavior locally.
 3. Trigger checkout from the app (POST to `/api/stripe/checkout`) and complete payment using Stripe test card `4242 4242 4242 4242`.
 4. Confirm user billing state updated to Pro:
    ```bash
-   npm run billing:state -- --email demo@snapframe.app
+   npm run billing:state -- --email <your-authenticated-email>
    ```
 5. Cancel subscription in Stripe test dashboard or billing portal, then trigger/update webhook events and confirm state returns to Free:
    ```bash
-   npm run billing:state -- --email demo@snapframe.app
+   npm run billing:state -- --email <your-authenticated-email>
    ```
 
 Expected webhook behavior:

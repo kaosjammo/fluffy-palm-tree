@@ -8,9 +8,13 @@ export default async function AccountPage() {
   const user = await requireUser();
   const dbUser = await prisma.user.findUnique({ where: { supabaseUserId: user.id } });
 
-  const currentPlan = dbUser ? getPlanForUser(dbUser) : "FREE";
-  const status = dbUser?.subscriptionStatus ?? "none";
-  const periodEnd = dbUser?.currentPeriodEnd ? new Date(dbUser.currentPeriodEnd).toLocaleDateString() : "-";
+  if (!dbUser) {
+    throw new Error("User provisioning failed");
+  }
+
+  const currentPlan = getPlanForUser(dbUser);
+  const status = dbUser.subscriptionStatus ?? "none";
+  const periodEnd = dbUser.currentPeriodEnd ? new Date(dbUser.currentPeriodEnd).toLocaleDateString() : "-";
 
   return (
     <main className="min-h-screen">

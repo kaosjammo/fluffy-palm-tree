@@ -144,7 +144,7 @@ export async function POST(request: Request) {
     console.info("Stripe webhook processed", { eventId: event.id, eventType: event.type });
     return NextResponse.json({ ok: true });
   } catch (error) {
-    console.error("Stripe webhook handling failed", error);
+    console.error("Stripe webhook handling failed", { eventId: event.id, eventType: event.type, error: String(error) });
     await unregisterStripeEvent(event.id);
     return NextResponse.json({ error: "Webhook handler failed", details: String(error) }, { status: 500 });
   }
